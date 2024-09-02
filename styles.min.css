@@ -6,11 +6,64 @@ body {
     font-family: Arial, sans-serif; /* Optional: Set a default font */
 }
 
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent background */
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 1000; /* Ensure the navbar is above other content */
+}
+
+.navbar-left {
+    flex: 1;
+}
+
+.navbar-label {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+}
+
+.navbar-icon-button {
+    margin-left: 15px;
+    text-decoration: none;
+}
+
+.navbar-icon {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.navbar-icon:hover {
+    transform: scale(1.2); /* Slight zoom effect on hover */
+}
+
+.navbar-logo {
+    width: 100px; /* Adjust the size of the company logo */
+    margin-left: 20px;
+}
+
+/* Add your other existing CSS here */
+
 .video-container {
     position: relative;
     width: 100%;
     height: 300px; /* Set the height of the video container */
     overflow: hidden;
+    margin-top: 70px; /* Adjust for the fixed navbar height */
 }
 
 .video-container video {
@@ -85,62 +138,4 @@ body {
     display: flex;
     flex-direction: column; /* Stack the button and label vertically */
     align-items: center; /* Center the button and label */
-    gap: 5px; /* Space between the button and the label */
-    position: relative; /* Required for the tooltip positioning */
-}
-
-a {
-    text-decoration: none; /* Remove underline from links */
-}
-
-.icon-button {
-    background-color: #f0f0f0; /* Button background color */
-    border: none; /* Remove default border */
-    padding: 10px; /* Add padding to the buttons */
-    border-radius: 5px; /* Add rounded corners */
-    cursor: pointer; /* Pointer cursor on hover */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: black; /* Default text color */
-    transition: background-color 0.3s, color 0.3s; /* Smooth transition for hover effect */
-}
-
-.icon-button:hover {
-    background-color: #cccccc; /* Change to desired hover color */
-    color: white; /* Change text color to white on hover */
-}
-
-.icon-button img {
-    width: 50px; /* Adjust the size of the icons */
-    height: 50px;
-}
-
-.button-label {
-    color: white; /* Set the label color to white */
-    font-size: 14px; /* Adjust the font size of the label */
-    text-align: center; /* Center the label text */
-}
-
-/* Custom Tooltip Styling */
-.tooltip {
-    visibility: hidden;
-    width: 120px;
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    border-radius: 5px;
-    padding: 5px;
-    position: absolute;
-    z-index: 1;
-    bottom: 125%; /* Position the tooltip above the button */
-    left: 50%;
-    margin-left: -60px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.icon-button:hover .tooltip {
-    visibility: visible;
-    opacity: 1;
-}
+    gap: 5px; /* Space

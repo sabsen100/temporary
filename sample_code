@@ -140,7 +140,80 @@ Df_cleaned.write \
 
     .save()
 
+%%writefile pyspark_bq_text_cleaning.py
 
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
+import nltk
+from nltk.stem import WordNetLemmatizer, PorterStemmer
+from nltk.corpus import stopwords
+import re
+
+# Download NLTK resources
+nltk.download('wordnet')
+nltk.download('stopwords')
+
+# Initialize lemmatizer and stemmer
+lemmatizer = WordNetLemmatizer()
+stemmer = PorterStemmer()
+stop_words = set(stopwords.words('english'))
+
+# Define text cleaning, lemmatization, and stemming functions
+def clean_text(text):
+    text = re.sub(r'\W', ' ', text)  # Remove special characters
+    text = re.sub(r'\s+', ' ', text)  # Remove extra spaces
+    text = re.sub(r'\d', '', text)  # Remove digits
+    text = text.strip().lower()  # Strip spaces and convert to lowercase
+    return text
+
+def lemmatize_text(text):
+    return ' '.join([lemmatizer.lemmatize(word) for word in text.split() if word not in stop_words])
+
+def stem_text(text):
+    return ' '.join([stemmer.stem(word) for word in text.split() if word not in stop_words])
+
+# Initialize SparkSession
+spark = SparkSession.builder \
+    .appName("BigQueryTextProcessing") \
+    .config("spark.jars", "path/to/spark-bigquery-connector.jar") \
+    .getOrCreate()
+
+# Read data from BigQuery using SQL query
+project_id = "your-project-id"
+dataset = "your-dataset"
+table = "your-table"
+sql_query = "SELECT column_name FROM `{}.{}.{}`".format(project_id, dataset, table)
+
+df = spark.read \
+    .format("bigquery") \
+    .option("query", sql_query) \
+    .load()
+
+# Convert DataFrame to RDD for map operations
+rdd = df.rdd.map(lambda row: row['column_name'])
+
+# Apply text processing functions using map
+rdd_cleaned = rdd.map(lambda text: clean_text(text))
+rdd_lemmatized = rdd_cleaned.map(lambda text: lemmatize_text(text))
+rdd_stemmed = rdd_cleaned.map(lambda text: stem_text(text))
+
+# Convert back to DataFrame
+df_processed = rdd_cleaned.zip(rdd_lemmatized).zip(rdd_stemmed).map(
+    lambda x: (x[0], x[1][0], x[1][1])
+).toDF(["cleaned_text", "lemmatized_text", "stemmed_text"])
+
+# Show results
+df_processed.show(truncate=False)
+
+# Save the processed data to a desired output location (e.g., back to BigQuery or a file)
+output_table = "your-output-table"
+df_processed.write \
+    .format("bigquery") \
+    .option("table", output_table) \
+    .save()
+
+# Stop the SparkSession
+spark.stop()
 
 # Stop the SparkSession
 

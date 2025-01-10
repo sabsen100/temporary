@@ -1,0 +1,150 @@
+
+
+
+
+%%writefile pyspark_bq_text_cleaning.py
+
+
+
+From pyspark.sql import SparkSession
+
+From pyspark.sql.functions import col, udf
+
+From pyspark.sql.types import StringType
+
+Import nltk
+
+From nltk.stem import WordNetLemmatizer, PorterStemmer
+
+From nltk.corpus import stopwords
+
+Import re
+
+
+
+# Download NLTK resources
+
+Nltk.download(‘wordnet’)
+
+Nltk.download(‘stopwords’)
+
+
+
+# Initialize lemmatizer and stemmer
+
+Lemmatizer = WordNetLemmatizer()
+
+Stemmer = PorterStemmer()
+
+Stop_words = set(stopwords.words(‘english’))
+
+
+
+# Define text cleaning, lemmatization, and stemming functions
+
+Def clean_text(text):
+
+    Text = re.sub(r’\W’, ‘ ‘, text)  # Remove special characters
+
+    Text = re.sub(r’\s+’, ‘ ‘, text)  # Remove extra spaces
+
+    Text = re.sub(r’\d’, ‘’, text)  # Remove digits
+
+    Text = text.strip().lower()  # Strip spaces and convert to lowercase
+
+    Return text
+
+
+
+Def lemmatize_text(text):
+
+    Return ‘ ‘.join([lemmatizer.lemmatize(word) for word in text.split() if word not in stop_words])
+
+
+
+Def stem_text(text):
+
+    Return ‘ ‘.join([stemmer.stem(word) for word in text.split() if word not in stop_words])
+
+
+
+# Wrap functions as UDFs
+
+Clean_text_udf = udf(clean_text, StringType())
+
+Lemmatize_text_udf = udf(lemmatize_text, StringType())
+
+Stem_text_udf = udf(stem_text, StringType())
+
+
+
+# Initialize SparkSession
+
+Spark = SparkSession.builder \
+
+    .appName(“BigQueryTextProcessing”) \
+
+    .config(“spark.jars”, “path/to/spark-bigquery-connector.jar”) \
+
+    .getOrCreate()
+
+
+
+# Read data from BigQuery using SQL query
+
+Project_id = “your-project-id”
+
+Dataset = “your-dataset”
+
+Table = “your-table”
+
+Sql_query = “SELECT column_name FROM `{}.{}.{}`”.format(project_id, dataset, table)
+
+
+
+Df = spark.read \
+
+    .format(“bigquery”) \
+
+    .option(“query”, sql_query) \
+
+    .load()
+
+
+
+# Perform text cleaning, lemmatization, and stemming
+
+Df_cleaned = df.withColumn(“cleaned_text”, clean_text_udf(col(“column_name”))) \
+
+               .withColumn(“lemmatized_text”, lemmatize_text_udf(col(“cleaned_text”))) \
+
+               .withColumn(“stemmed_text”, stem_text_udf(col(“cleaned_text”)))
+
+
+
+# Show results
+
+Df_cleaned.show(truncate=False)
+
+
+
+# Save the processed data to a desired output location (e.g., back to BigQuery or a file)
+
+Output_table = “your-output-table”
+
+Df_cleaned.write \
+
+    .format(“bigquery”) \
+
+    .option(“table”, output_table) \
+
+    .save()
+
+
+
+# Stop the SparkSession
+
+Spark.stop()
+
+
+

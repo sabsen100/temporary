@@ -226,6 +226,71 @@ def sentence_to_vector(sentence, model):
     words = sentence.decode("utf-8").split()  # Tokenize the sentence
     word_vectors = [model[word] for word in words if word in model]
     if not word_vectors:  # If no words are in the model, return a zero vector
+
+
+import pyarrow.parquet as pq
+import numpy as np
+import xgboost as xgb
+from sklearn.metrics import mean_squared_error
+
+# File paths
+vectors_file = "vectors.parquet"
+targets_file = "targets.parquet"
+
+# Step 1: Load Parquet files in chunks
+vectors_pq = pq.ParquetFile(vectors_file)
+targets_pq = pq.ParquetFile(targets_file)
+
+# Initialize arrays for training
+batch_size = 10000  # Adjust as per memory availability
+train_data = []
+train_labels = []
+
+# Step 2: Process row groups
+for i in range(vectors_pq.num_row_groups):
+    # Load a chunk of vectors and targets
+    vectors_chunk = vectors_pq.read_row_group(i).to_pandas().to_dict()
+    targets_chunk = targets_pq.read_row_group(i).to_pandas().to_dict()
+    
+    # Convert dictionaries to arrays
+    for row_id, vector in vectors_chunk.items():
+        train_data.append(vector)
+        train_labels.append(targets_chunk[row_id])
+    
+    # If batch size reached, train XGBoost
+    if len(train_data) >= batch_size:
+        X = np.array(train_data, dtype=np.float32)
+        y = np.array(train_labels, dtype=np.float32)
+        dmatrix = xgb.DMatrix(X, label=y)
+        
+        # Train XGBoost model
+        if i == 0:
+            params = {
+                "objective": "reg:squarederror",
+                "max_depth": 6,
+                "learning_rate": 0.1,
+                "n_estimators": 100,
+            }
+            model = xgb.train(params, dmatrix, num_boost_round=10)
+        else:
+            model = xgb.train(params, dmatrix, num_boost_round=10, xgb_model=model)
+        
+        # Clear memory for next batch
+        train_data, train_labels = [], []
+
+# Step 3: Evaluate the model
+if train_data:
+    # Train with remaining data
+    X = np.array(train_data, dtype=np.float32)
+    y = np.array(train_labels, dtype=np.float32)
+    dmatrix = xgb.DMatrix(X, label=y)
+    model = xgb.train(params, dmatrix, num_boost_round=10, xgb_model=model)
+
+# Save the model
+model.save_model("xgboost_model.json")
+
+print("Training complete and model saved!")
+
         return np.zeros(model.vector_size)
     return np.mean(word_vectors, axis=0)
 

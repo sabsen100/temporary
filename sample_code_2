@@ -124,3 +124,55 @@ def main():
 
 if __name__ == "__main__":
     results = main()
+
+
+
+
+from google.cloud import aiplatform
+
+# Initialize the Vertex AI client
+def initialize_client(project_id, region):
+    aiplatform.init(project=project_id, location=region)
+
+# Fetch the pipeline details and generate job links
+def list_pipelines_with_links(project_id, region, filter_condition=None):
+    # Initialize the client
+    initialize_client(project_id, region)
+
+    # Create the pipeline service client
+    client = aiplatform.PipelineServiceClient(client_options={
+        "api_endpoint": f"{region}-aiplatform.googleapis.com"
+    })
+
+    # Define the parent resource path
+    parent = f"projects/{project_id}/locations/{region}"
+
+    # List pipelines
+    request = {
+        "parent": parent,
+        "filter": filter_condition,  # Optional: Add filters here
+    }
+    response = client.list_training_pipelines(request=request)
+
+    # Print the details of each pipeline with job link
+    for pipeline in response:
+        pipeline_id = pipeline.name.split("/")[-1]  # Extract the pipeline ID
+        job_link = f"https://console.cloud.google.com/vertex-ai/locations/{region}/pipelines/{pipeline_id}?project={project_id}"
+
+        print("Pipeline Name:", pipeline.name)
+        print("Display Name:", pipeline.display_name)
+        print("State:", pipeline.state)
+        print("Create Time:", pipeline.create_time)
+        print("Update Time:", pipeline.update_time)
+        print("Job Link:", job_link)
+        print("-" * 50)
+
+# Replace with your project ID and region
+project_id = "your-project-id"
+region = "your-region"
+
+# Optional: Add filters (e.g., by pipeline name)
+filter_condition = 'display_name="example_pipeline_name"'
+
+# Fetch and list pipelines with job links
+list_pipelines_with_links(project_id, region, filter_condition)

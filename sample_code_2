@@ -4,7 +4,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score
+)
 from xgboost import XGBClassifier
 
 def load_pickle(file_path):
@@ -22,39 +28,60 @@ def prepare_data(vectors_dict, target_dict):
             y.append(target_dict[row_id])
     return np.array(X), np.array(y)
 
-def train_random_forest(X_train, y_train, X_test, y_test):
+def evaluate_model(y_true, y_pred, y_proba=None):
+    """Evaluate model and return metrics."""
+    metrics = {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "precision": precision_score(y_true, y_pred, average="weighted"),
+        "recall": recall_score(y_true, y_pred, average="weighted"),
+        "f1_score": f1_score(y_true, y_pred, average="weighted"),
+    }
+    if y_proba is not None and len(np.unique(y_true)) == 2:  # Binary classification
+        metrics["auc"] = roc_auc_score(y_true, y_proba)
+    return metrics
+
+def train_random_forest(X_train, y_train, X_test, y_test, params):
     """Train a Random Forest Classifier."""
-    model = RandomForestClassifier()
+    model = RandomForestClassifier(**params)
     model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
-    print("Random Forest Accuracy:", accuracy_score(y_test, predictions))
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1] if len(np.unique(y_test)) == 2 else None
+    metrics = evaluate_model(y_test, y_pred, y_proba)
+    return model, metrics
 
-def train_svm(X_train, y_train, X_test, y_test):
+def train_svm(X_train, y_train, X_test, y_test, params):
     """Train a Support Vector Machine Classifier."""
-    model = SVC()
+    model = SVC(**params, probability=True)
     model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
-    print("SVM Accuracy:", accuracy_score(y_test, predictions))
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1] if len(np.unique(y_test)) == 2 else None
+    metrics = evaluate_model(y_test, y_pred, y_proba)
+    return model, metrics
 
-def train_logistic_regression(X_train, y_train, X_test, y_test):
+def train_logistic_regression(X_train, y_train, X_test, y_test, params):
     """Train a Logistic Regression Classifier."""
-    model = LogisticRegression()
+    model = LogisticRegression(**params)
     model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
-    print("Logistic Regression Accuracy:", accuracy_score(y_test, predictions))
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1] if len(np.unique(y_test)) == 2 else None
+    metrics = evaluate_model(y_test, y_pred, y_proba)
+    return model, metrics
 
-def train_xgboost(X_train, y_train, X_test, y_test):
+def train_xgboost(X_train, y_train, X_test, y_test, params):
     """Train an XGBoost Classifier."""
-    model = XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+    model = XGBClassifier(**params)
     model.fit(X_train, y_train)
-    predictions = model.predict(X_test)
-    print("XGBoost Accuracy:", accuracy_score(y_test, predictions))
+    y_pred = model.predict(X_test)
+    y_proba = model.predict_proba(X_test)[:, 1] if len(np.unique(y_test)) == 2 else None
+    metrics = evaluate_model(y_test, y_pred, y_proba)
+    return model, metrics
 
 def main():
-    # Load pickled dictionaries
-    vectors_file = input("Enter the path to the vectors pickle file: ")
-    target_file = input("Enter the path to the target pickle file: ")
+    # Paths to pickle files
+    vectors_file = "path_to_vectors_pickle.pkl"  # Replace with your file path
+    target_file = "path_to_target_pickle.pkl"  # Replace with your file path
 
+    # Load pickled dictionaries
     vectors_dict = load_pickle(vectors_file)
     target_dict = load_pickle(target_file)
 
@@ -64,24 +91,36 @@ def main():
     # Split data into train and test sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Choose model to train
-    print("Choose a model to train:")
-    print("1. Random Forest")
-    print("2. Support Vector Machine")
-    print("3. Logistic Regression")
-    print("4. XGBoost")
-    choice = int(input("Enter your choice (1/2/3/4): "))
+    # Define parameters for each model
+    random_forest_params = {'n_estimators': 100, 'max_depth': 10, 'random_state': 42}
+    svm_params = {'C': 1.0, 'kernel': 'linear'}
+    logistic_regression_params = {'solver': 'liblinear', 'penalty': 'l2'}
+    xgboost_params = {'n_estimators': 100, 'learning_rate': 0.1, 'max_depth': 5, 'use_label_encoder': False, 'eval_metric': 'logloss'}
 
-    if choice == 1:
-        train_random_forest(X_train, y_train, X_test, y_test)
-    elif choice == 2:
-        train_svm(X_train, y_train, X_test, y_test)
-    elif choice == 3:
-        train_logistic_regression(X_train, y_train, X_test, y_test)
-    elif choice == 4:
-        train_xgboost(X_train, y_train, X_test, y_test)
-    else:
-        print("Invalid choice. Please choose a valid option.")
+    # Train models and collect metrics
+    print("\nTraining Random Forest...")
+    rf_model, rf_metrics = train_random_forest(X_train, y_train, X_test, y_test, random_forest_params)
+    print("Random Forest Metrics:", rf_metrics)
+
+    print("\nTraining SVM...")
+    svm_model, svm_metrics = train_svm(X_train, y_train, X_test, y_test, svm_params)
+    print("SVM Metrics:", svm_metrics)
+
+    print("\nTraining Logistic Regression...")
+    lr_model, lr_metrics = train_logistic_regression(X_train, y_train, X_test, y_test, logistic_regression_params)
+    print("Logistic Regression Metrics:", lr_metrics)
+
+    print("\nTraining XGBoost...")
+    xgb_model, xgb_metrics = train_xgboost(X_train, y_train, X_test, y_test, xgboost_params)
+    print("XGBoost Metrics:", xgb_metrics)
+
+    # Return trained models and metrics
+    return {
+        "random_forest": {"model": rf_model, "metrics": rf_metrics},
+        "svm": {"model": svm_model, "metrics": svm_metrics},
+        "logistic_regression": {"model": lr_model, "metrics": lr_metrics},
+        "xgboost": {"model": xgb_model, "metrics": xgb_metrics}
+    }
 
 if __name__ == "__main__":
-    main()
+    results = main()

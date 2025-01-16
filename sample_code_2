@@ -1,0 +1,87 @@
+import pickle
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+
+def load_pickle(file_path):
+    """Load data from a pickle file."""
+    with open(file_path, 'rb') as f:
+        return pickle.load(f)
+
+def prepare_data(vectors_dict, target_dict):
+    """Prepare feature and target arrays for model training."""
+    X = []
+    y = []
+    for row_id, vector in vectors_dict.items():
+        if row_id in target_dict:  # Ensure target exists for the row ID
+            X.append(vector)
+            y.append(target_dict[row_id])
+    return np.array(X), np.array(y)
+
+def train_random_forest(X_train, y_train, X_test, y_test):
+    """Train a Random Forest Classifier."""
+    model = RandomForestClassifier()
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    print("Random Forest Accuracy:", accuracy_score(y_test, predictions))
+
+def train_svm(X_train, y_train, X_test, y_test):
+    """Train a Support Vector Machine Classifier."""
+    model = SVC()
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    print("SVM Accuracy:", accuracy_score(y_test, predictions))
+
+def train_logistic_regression(X_train, y_train, X_test, y_test):
+    """Train a Logistic Regression Classifier."""
+    model = LogisticRegression()
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    print("Logistic Regression Accuracy:", accuracy_score(y_test, predictions))
+
+def train_xgboost(X_train, y_train, X_test, y_test):
+    """Train an XGBoost Classifier."""
+    model = XGBClassifier(use_label_encoder=False, eval_metric='logloss')
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    print("XGBoost Accuracy:", accuracy_score(y_test, predictions))
+
+def main():
+    # Load pickled dictionaries
+    vectors_file = input("Enter the path to the vectors pickle file: ")
+    target_file = input("Enter the path to the target pickle file: ")
+
+    vectors_dict = load_pickle(vectors_file)
+    target_dict = load_pickle(target_file)
+
+    # Prepare data
+    X, y = prepare_data(vectors_dict, target_dict)
+
+    # Split data into train and test sets
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Choose model to train
+    print("Choose a model to train:")
+    print("1. Random Forest")
+    print("2. Support Vector Machine")
+    print("3. Logistic Regression")
+    print("4. XGBoost")
+    choice = int(input("Enter your choice (1/2/3/4): "))
+
+    if choice == 1:
+        train_random_forest(X_train, y_train, X_test, y_test)
+    elif choice == 2:
+        train_svm(X_train, y_train, X_test, y_test)
+    elif choice == 3:
+        train_logistic_regression(X_train, y_train, X_test, y_test)
+    elif choice == 4:
+        train_xgboost(X_train, y_train, X_test, y_test)
+    else:
+        print("Invalid choice. Please choose a valid option.")
+
+if __name__ == "__main__":
+    main()

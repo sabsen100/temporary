@@ -1,0 +1,101 @@
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+import joblib
+import numpy as np
+
+# Define a function to load text data in batches
+def load_text_data_in_batches(file_path, batch_size=1000):
+    """
+    Generator function to load text data in batches.
+    Args:
+        file_path (str): Path to the text file containing the data.
+        batch_size (int): Number of lines to process in each batch.
+    Yields:
+        list: A batch of lines from the file.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        batch = []
+        for line in f:
+            batch.append(line.strip())
+            if len(batch) == batch_size:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
+
+# ------------------- Training and Saving Models ------------------- #
+
+# Initialize vectorizers
+count_vectorizer = CountVectorizer()
+tfidf_transformer = TfidfTransformer()
+
+# Placeholder for cumulative counts
+cumulative_counts = None
+
+# File path to the large text dataset
+file_path = "large_text_data.txt"  # Replace with your file path
+batch_size = 1000  # Adjust based on available memory
+
+# Process data in batches
+for batch in load_text_data_in_batches(file_path, batch_size=batch_size):
+    print(f"Processing a batch of size {len(batch)}...")
+
+    # Learn and transform the current batch using CountVectorizer
+    batch_counts = count_vectorizer.fit_transform(batch)
+    
+    # Accumulate counts
+    if cumulative_counts is None:
+        cumulative_counts = batch_counts
+    else:
+        cumulative_counts += batch_counts
+
+# Compute TF-IDF on the cumulative counts
+print("Computing TF-IDF...")
+tfidf_matrix = tfidf_transformer.fit_transform(cumulative_counts)
+
+# Save the models and matrices for future use
+joblib.dump(count_vectorizer, 'count_vectorizer.pkl')
+joblib.dump(tfidf_transformer, 'tfidf_transformer.pkl')
+joblib.dump(tfidf_matrix, 'tfidf_matrix.pkl')
+
+print("Training complete. Models and matrices saved.")
+
+# ------------------- Loading and Generating Vectors ------------------- #
+
+def generate_vectors_from_text(texts, count_vectorizer_path, tfidf_transformer_path):
+    """
+    Generates TF-IDF vectors for given text data using pre-trained models.
+    Args:
+        texts (list): List of text strings to vectorize.
+        count_vectorizer_path (str): Path to the saved CountVectorizer model.
+        tfidf_transformer_path (str): Path to the saved TfidfTransformer model.
+    Returns:
+        scipy.sparse matrix: TF-IDF vectors for the input texts.
+    """
+    # Load the trained models
+    count_vectorizer = joblib.load(count_vectorizer_path)
+    tfidf_transformer = joblib.load(tfidf_transformer_path)
+    
+    # Transform the input texts to count vectors
+    text_counts = count_vectorizer.transform(texts)
+    
+    # Transform the count vectors to TF-IDF vectors
+    tfidf_vectors = tfidf_transformer.transform(text_counts)
+    
+    return tfidf_vectors
+
+# Example usage of the loading and vectorization part
+new_texts = [
+    "This is a sample text to generate TF-IDF vectors.",
+    "Another example of text processing using sklearn."
+]
+
+# Paths to the saved models
+count_vectorizer_path = 'count_vectorizer.pkl'
+tfidf_transformer_path = 'tfidf_transformer.pkl'
+
+# Generate TF-IDF vectors for new texts
+print("Generating vectors for new texts...")
+vectors = generate_vectors_from_text(new_texts, count_vectorizer_path, tfidf_transformer_path)
+
+print("TF-IDF Vectors:")
+print(vectors)

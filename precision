@@ -1,0 +1,70 @@
+def calculate_metrics(y_true, y_pred):
+    TP = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 1 and yp == 1)
+    FP = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 0 and yp == 1)
+    TN = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 0 and yp == 0)
+    FN = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 1 and yp == 0)
+
+    # Precision: TP / (TP + FP)
+    precision = TP / (TP + FP) if (TP + FP) > 0 else 0
+
+    # Recall: TP / (TP + FN)
+    recall = TP / (TP + FN) if (TP + FN) > 0 else 0
+
+    # Accuracy: (TP + TN) / (TP + TN + FP + FN)
+    accuracy = (TP + TN) / (TP + TN + FP + FN)
+
+    # F1 Score (Harmonic mean of precision and recall)
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+    return precision, recall, accuracy, f1
+
+# Example binary classification output
+y_true = [0, 1, 1, 0, 1, 0, 1, 1, 0, 0]
+y_pred = [0, 1, 0, 0, 1, 0, 1, 1, 1, 0]
+
+precision, recall, accuracy, f1 = calculate_metrics(y_true, y_pred)
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"Accuracy: {accuracy:.4f}")
+print(f"F1 Score: {f1:.4f}")
+
+def calculate_f1_scores(y_true, y_pred):
+    classes = set(y_true)  # Get unique classes (0,1)
+    f1_scores = []
+    total_samples = len(y_true)
+    weighted_f1_sum = 0
+
+    for cls in classes:
+        TP = sum(1 for yt, yp in zip(y_true, y_pred) if yt == cls and yp == cls)
+        FP = sum(1 for yt, yp in zip(y_true, y_pred) if yt != cls and yp == cls)
+        FN = sum(1 for yt, yp in zip(y_true, y_pred) if yt == cls and yp != cls)
+        support = sum(1 for yt in y_true if yt == cls)
+
+        precision = TP / (TP + FP) if (TP + FP) > 0 else 0
+        recall = TP / (TP + FN) if (TP + FN) > 0 else 0
+        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+        f1_scores.append(f1)
+        weighted_f1_sum += f1 * support  # Weighted sum for weighted F1
+
+    # Macro F1: Simple average of F1 scores
+    f1_macro = sum(f1_scores) / len(f1_scores)
+
+    # Micro F1: Compute TP, FP, FN globally and then apply F1 formula
+    TP_micro = sum(1 for yt, yp in zip(y_true, y_pred) if yt == yp and yt == 1)
+    FP_micro = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 0 and yp == 1)
+    FN_micro = sum(1 for yt, yp in zip(y_true, y_pred) if yt == 1 and yp == 0)
+
+    precision_micro = TP_micro / (TP_micro + FP_micro) if (TP_micro + FP_micro) > 0 else 0
+    recall_micro = TP_micro / (TP_micro + FN_micro) if (TP_micro + FN_micro) > 0 else 0
+    f1_micro = 2 * (precision_micro * recall_micro) / (precision_micro + recall_micro) if (precision_micro + recall_micro) > 0 else 0
+
+    # Weighted F1 Score
+    f1_weighted = weighted_f1_sum / total_samples
+
+    return f1_macro, f1_micro, f1_weighted
+
+f1_macro, f1_micro, f1_weighted = calculate_f1_scores(y_true, y_pred)
+print(f"F1 Macro Score: {f1_macro:.4f}")
+print(f"F1 Micro Score: {f1_micro:.4f}")
+print(f"F1 Weighted Score: {f1_weighted:.4f}")
